@@ -24,16 +24,12 @@ int auth_check(const char *user_file, const char *username,
         return -1;
     }
 
-    printf("[auth] Opened user file OK: %s\n", user_file);
-
     while (fgets(line, sizeof(line), fp)) {
         /* 去除换行 */
         size_t len = strlen(line);
         while (len > 0 && (line[len-1] == '\n' || line[len-1] == '\r'))
             line[--len] = '\0';
         if (len == 0 || line[0] == '#') continue;
-
-        printf("[auth] Checking line: '%s'\n", line);
 
         file_user = strtok_r(line, ":", &saveptr);
         if (!file_user) continue;
@@ -44,8 +40,6 @@ int auth_check(const char *user_file, const char *username,
 
         if (strcmp(file_user, username) == 0 &&
             strcmp(file_pass, password) == 0) {
-            printf("[auth] MATCH: user='%s' pass='%s' home='%s'\n",
-                   file_user, file_pass, file_home);
             strncpy(user->username, file_user, sizeof(user->username) - 1);
             strncpy(user->password, file_pass, sizeof(user->password) - 1);
             strncpy(user->home_dir, file_home, sizeof(user->home_dir) - 1);
