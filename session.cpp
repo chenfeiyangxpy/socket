@@ -52,11 +52,17 @@ void session_reset(FtpSession *s) {
 
 /* 获取绝对路径（拼接home_dir和current_dir） */
 void session_get_abs_path(FtpSession *s, char *buf, size_t size) {
+    char tmp[1024];
+
     if (s->current_dir[0] == '\0' || strcmp(s->current_dir, "/") == 0) {
-        snprintf(buf, size, "%s", s->home_dir);
+        snprintf(tmp, sizeof(tmp), "%s", s->home_dir);
     } else {
-        snprintf(buf, size, "%s%s", s->home_dir, s->current_dir);
+        snprintf(tmp, sizeof(tmp), "%s%s", s->home_dir, s->current_dir);
     }
+
+    /* 截断以保证不超出目标缓冲区 */
+    tmp[sizeof(tmp) - 1] = '\0';
+    snprintf(buf, size, "%s", tmp);
 }
 
 /*
@@ -66,8 +72,8 @@ void session_get_abs_path(FtpSession *s, char *buf, size_t size) {
  */
 void session_resolve_path(FtpSession *s, const char *input,
                           char *abs_path, size_t size) {
-    char tmp[2048];
-    char cwd[1024];
+    char tmp[4096];
+    char cwd[2048];
 
     session_get_abs_path(s, cwd, sizeof(cwd));
 
@@ -82,9 +88,9 @@ void session_resolve_path(FtpSession *s, const char *input,
     } else {
         /* 相对路径：拼接当前目录 */
         snprintf(tmp, sizeof(tmp), "%s/%s", cwd, input);
-        /* 检查是否超出缓冲区，截断以避免警告 */
-        tmp[sizeof(tmp) - 1] = '\0';
     }
+    /* 确保截断 */
+    tmp[sizeof(tmp) - 1] = '\0';
 
     /* 使用realpath解析".."和"."等 */
     char *real = realpath(tmp, NULL);
