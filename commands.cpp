@@ -585,6 +585,9 @@ int cmd_RETR(FtpSession *s, const char *arg) {
         return 0;
     }
 
+    /* 先发 150 告知客户端准备接收数据 */
+    session_reply(s, "150 Opening data connection for file download.\r\n");
+
     /* 发送文件内容 */
     char buf[8192];
     ssize_t n;
@@ -610,7 +613,6 @@ done:
     s->xfer_offset = 0;
     s->data_conn.restart_pos = 0;
 
-    session_reply(s, "150 Opening data connection for file download.\r\n");
     data_conn_close(&s->data_conn);
     session_reply(s, "226 Transfer complete. (%lld bytes)\r\n", (long long)total);
     return 0;

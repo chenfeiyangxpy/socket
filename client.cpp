@@ -152,7 +152,7 @@ static void cmd_retr(const char *arg) {
         printf("Usage: get <filename>\n");
         return;
     }
-    if (!data_fd) {
+    if (data_fd < 0) {
         printf("Use 'pasv' first.\n");
         return;
     }
@@ -206,7 +206,7 @@ static void cmd_stor(const char *arg) {
         printf("Usage: put <local_file>\n");
         return;
     }
-    if (!data_fd) {
+    if (data_fd < 0) {
         printf("Use 'pasv' first.\n");
         return;
     }
@@ -385,15 +385,31 @@ static void process_line(const char *line) {
         return;
     }
 
-    /* 如果不是内部命令，直接发送到服务器 */
+    /* list: 发送 LIST 命令并读取数据通道的目录列表 */
+    if (strcmp(cmd, "list") == 0) {
+        if (arg[0]) send_cmd("LIST %s\r\n", arg);
+        else send_cmd("LIST\r\n");
+        int code = read_response();  /* 期望 150 */
+        if ((code == 150 || code == 125) && data_fd >= 0) {
+            /* 读取目录列表数据并打印 */
+            char dbuf[4096];
+            ssize_t n;
+            while ((n = read(data_fd, dbuf, sizeof(dbuf) - 1)) > 0) {
+                dbuf[n] = '\0';
+                printf("%s", dbuf);
+            }
+            close_data();
+        }
+        read_response();  /* 226 Directory send OK */
+        return;
+    }
+
+    /* nlst: 类似 list 但只输出文件名 */
     /* 自动构造标准FTP命令 */
     if (strcmp(cmd, "user") == 0) {
         send_cmd("USER %s\r\n", arg);
     } else if (strcmp(cmd, "pass") == 0) {
         send_cmd("PASS %s\r\n", arg);
-    } else if (strcmp(cmd, "list") == 0) {
-        if (arg[0]) send_cmd("LIST %s\r\n", arg);
-        else send_cmd("LIST\r\n");
     } else if (strcmp(cmd, "pwd") == 0) {
         send_cmd("PWD\r\n");
     } else if (strcmp(cmd, "cwd") == 0 || strcmp(cmd, "cd") == 0) {
