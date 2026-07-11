@@ -20,10 +20,15 @@ void config_default(ServerConfig *cfg) {
 }
 
 static void trim(char *s) {
+    /* 去掉行首空白 */
+    char *start = s;
+    while (*start == ' ' || *start == '\t') start++;
+    if (start != s) memmove(s, start, strlen(start) + 1);
+
+    /* 去掉行尾空白 */
     char *p = s + strlen(s) - 1;
     while (p >= s && (*p == ' ' || *p == '\t' || *p == '\r' || *p == '\n'))
         *p-- = '\0';
-    while (*s == ' ' || *s == '\t') s++;
 }
 
 int config_load(ServerConfig *cfg, const char *path) {
