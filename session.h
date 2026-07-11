@@ -57,7 +57,7 @@ typedef struct FtpSession {
 
     /* 重命名状态（RNFR -> RNTO） */
     int rename_pending;
-    char rename_from[256];
+    char rename_from[1024];
 
     /* 命令缓冲区 */
     char cmd_buf[4096];
