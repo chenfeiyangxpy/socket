@@ -43,7 +43,8 @@ static void send_cmd(const char *fmt, ...) {
     va_end(ap);
 
     int len = strlen(buf);
-    write(ctrl_fd, buf, len);
+    ssize_t ret = write(ctrl_fd, buf, len);
+    (void)ret;
     printf(">>> %s", buf);
 }
 
@@ -160,9 +161,9 @@ static void cmd_retr(const char *arg) {
     /* 使用文件名（去掉路径） */
     const char *slash = strrchr(arg, '/');
     if (slash)
-        strncpy(filename, slash + 1, sizeof(filename) - 1);
+        snprintf(filename, sizeof(filename), "%s", slash + 1);
     else
-        strncpy(filename, arg, sizeof(filename) - 1);
+        snprintf(filename, sizeof(filename), "%s", arg);
 
     /* 发送RETR命令 */
     send_cmd("RETR %s\r\n", arg);
@@ -187,7 +188,8 @@ static void cmd_retr(const char *arg) {
     off_t total = 0;
 
     while ((n = read(data_fd, buf, sizeof(buf))) > 0) {
-        write(fd, buf, n);
+        ssize_t w = write(fd, buf, n);
+        (void)w;
         total += n;
     }
 
@@ -274,9 +276,9 @@ static void process_line(const char *line) {
         if (clen >= sizeof(cmd)) clen = sizeof(cmd) - 1;
         memcpy(cmd, line, clen);
         cmd[clen] = '\0';
-        strncpy(arg, space + 1, sizeof(arg) - 1);
+        snprintf(arg, sizeof(arg), "%s", space + 1);
     } else {
-        strncpy(cmd, line, sizeof(cmd) - 1);
+        snprintf(cmd, sizeof(cmd), "%s", line);
         arg[0] = '\0';
     }
 

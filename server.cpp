@@ -247,7 +247,7 @@ int main(int argc, char *argv[]) {
     /* 加载配置 */
     config_load(&g_config, config_path);
     if (port_override > 0) g_config.port = port_override;
-    strncpy(g_user_file, g_config.user_file, sizeof(g_user_file) - 1);
+    snprintf(g_user_file, sizeof(g_user_file), "%s", g_config.user_file);
 
     config_print(&g_config);
 

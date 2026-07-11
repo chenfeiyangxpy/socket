@@ -296,7 +296,7 @@ int cmd_RNFR(FtpSession *s, const char *arg) {
         return 0;
     }
 
-    strncpy(s->rename_from, abs_path, sizeof(s->rename_from) - 1);
+    snprintf(s->rename_from, sizeof(s->rename_from), "%s", abs_path);
     s->rename_pending = 1;
     session_reply(s, "350 File exists, proceed with RNTO.\r\n");
     return 0;
@@ -492,8 +492,10 @@ int cmd_LIST(FtpSession *s, const char *arg) {
                  (unsigned long)st.st_nlink,
                  (long long)st.st_size,
                  timebuf, arg ? arg : "");
-        if (s->data_conn.fd >= 0)
-            write(s->data_conn.fd, buf, strlen(buf));
+        if (s->data_conn.fd >= 0) {
+            ssize_t nw = write(s->data_conn.fd, buf, strlen(buf));
+            (void)nw;
+        }
     }
 
     data_conn_close(&s->data_conn);
