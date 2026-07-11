@@ -54,6 +54,11 @@ int config_load(ServerConfig *cfg, const char *path) {
         trim(key);
         trim(val);
 
+        /* 去掉行尾注释（从第一个#开始截断） */
+        char *pound = strchr(val, '#');
+        if (pound) *pound = '\0';
+        trim(val);
+
         if (strcasecmp(key, "port") == 0)
             cfg->port = atoi(val);
         else if (strcasecmp(key, "data_port_min") == 0)
