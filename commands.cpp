@@ -138,6 +138,9 @@ int cmd_PASS(FtpSession *s, const char *arg) {
     /* 从配置文件获取user_file路径 - 通过外部配置传入 */
     extern char g_user_file[256];
 
+    printf("[auth] Checking user='%s' pass='%s' file='%s'\n",
+           s->username, arg ? arg : "(null)", g_user_file);
+
     if (auth_check(g_user_file, s->username, arg ? arg : "", &user) == 0) {
         /* 认证成功 */
         strcpy(s->home_dir, user.home_dir);
