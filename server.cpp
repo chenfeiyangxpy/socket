@@ -14,6 +14,7 @@
 #include <signal.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <getopt.h>
@@ -39,13 +40,6 @@ static int g_max_sessions = 0;  /* 最大会话数 */
 static FtpSession **g_sessions = NULL;  /* 会话池（简易管理） */
 
 /* ========== 辅助函数 ========== */
-
-/* 设置非阻塞 */
-static int set_nonblock(int fd) {
-    int fl = fcntl(fd, F_GETFL, 0);
-    if (fl < 0) return -1;
-    return fcntl(fd, F_SETFL, fl | O_NONBLOCK);
-}
 
 /* 创建监听socket */
 static int create_listen_fd(const ServerConfig *cfg) {
