@@ -105,25 +105,28 @@ void session_resolve_path(FtpSession *s, const char *input,
 
 /* 检查路径是否在用户家目录内（安全性，防止../越狱） */
 int session_path_safe(FtpSession *s, const char *abs_path) {
-    char real_home[1024];
-    char real_path[1024];
-    char *p;
+    char real_home[PATH_MAX];
 
-    p = realpath(s->home_dir, real_home);
-    if (!p) return 0;
+    if (!realpath(s->home_dir, real_home))
+        return 0;
 
-    p = realpath(abs_path, NULL);
-    if (!p) return 0;
-    strncpy(real_path, p, sizeof(real_path) - 1);
-    free(p);
+    /* 目标路径可能存在，也可能尚不存在（如MKD、RMD等操作） */
+    char *real_path = realpath(abs_path, NULL);
+    if (real_path) {
+        /* 存在：用realpath解析后比较前缀 */
+        size_t len = strlen(real_home);
+        int ok = (strncmp(real_path, real_home, len) == 0 &&
+                  (real_path[len] == '\0' || real_path[len] == '/'));
+        free(real_path);
+        return ok;
+    }
 
-    /* 检查real_path是否以real_home开头 */
+    /* 不存在（如新建目录）：用字符串前缀检查 */
     size_t len = strlen(real_home);
-    if (strncmp(real_path, real_home, len) != 0)
+    if (strncmp(abs_path, real_home, len) != 0)
         return 0;
-    if (real_path[len] != '\0' && real_path[len] != '/')
+    if (abs_path[len] != '\0' && abs_path[len] != '/')
         return 0;
-
     return 1;
 }
 

@@ -32,6 +32,9 @@ static int server_port = 21;
 static char recv_buf[65536];
 static int recv_len = 0;
 
+/* 默认自动PASV模式 */
+static int auto_pasv = 1;
+
 /* ========== 工具函数 ========== */
 
 /* 发送命令到服务器 */
@@ -144,6 +147,23 @@ static void close_data() {
     }
 }
 
+/* ========== 自动PASV ========== */
+
+/* 如果数据连接未建立，自动执行PASV */
+static int ensure_pasv() {
+    if (data_fd >= 0) return 0;   /* 已连接 */
+    if (!auto_pasv) return -1;    /* 自动PASV已禁用 */
+
+    printf("[auto] Sending PASV...\n");
+    send_cmd("PASV\r\n");
+    int code = read_response();
+    if (code == 227) {
+        return connect_data_pasv(recv_buf);
+    }
+    printf("[auto] PASV failed (code=%d)\n", code);
+    return -1;
+}
+
 /* ========== 文件传输函数 ========== */
 
 /* RETR：从服务器下载文件 */
@@ -152,8 +172,8 @@ static void cmd_retr(const char *arg) {
         printf("Usage: get <filename>\n");
         return;
     }
-    if (data_fd < 0) {
-        printf("Use 'pasv' first.\n");
+    if (ensure_pasv() < 0) {
+        printf("[!] No data connection. Use 'pasv' manually or check server.\n");
         return;
     }
 
@@ -206,8 +226,8 @@ static void cmd_stor(const char *arg) {
         printf("Usage: put <local_file>\n");
         return;
     }
-    if (data_fd < 0) {
-        printf("Use 'pasv' first.\n");
+    if (ensure_pasv() < 0) {
+        printf("[!] No data connection. Use 'pasv' manually or check server.\n");
         return;
     }
 
@@ -368,10 +388,10 @@ static void process_line(const char *line) {
             "  open <host> [port]  Connect to FTP server\n"
             "  user <name>         Send username\n"
             "  pass <pass>         Send password\n"
-            "  pasv                Enter passive mode\n"
+            "  pasv                Enter passive mode (auto by default)\n"
             "  list [path]         List directory\n"
-            "  get <file>          Download file (use after pasv)\n"
-            "  put <file>          Upload file (use after pasv)\n"
+            "  get <file>          Download file (PASV auto)\n"
+            "  put <file>          Upload file (PASV auto)\n"
             "  pwd                 Print working directory\n"
             "  cwd <dir>           Change directory\n"
             "  mkd <dir>           Create directory\n"
@@ -387,10 +407,14 @@ static void process_line(const char *line) {
 
     /* list: 发送 LIST 命令并读取数据通道的目录列表 */
     if (strcmp(cmd, "list") == 0) {
+        if (ensure_pasv() < 0) {
+            printf("[!] No data connection. Use 'pasv' manually or check server.\n");
+            return;
+        }
         if (arg[0]) send_cmd("LIST %s\r\n", arg);
         else send_cmd("LIST\r\n");
         int code = read_response();  /* 期望 150 */
-        if ((code == 150 || code == 125) && data_fd >= 0) {
+        if (code == 150 || code == 125) {
             /* 读取目录列表数据并打印 */
             char dbuf[4096];
             ssize_t n;
